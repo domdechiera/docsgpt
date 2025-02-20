@@ -15,7 +15,5 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
-    # Enable version updates for npm
     versioning-strategy: auto
-    # Enable security updates
-    security-updates-only: false 
+    # Security updates are enabled by default, no need for explicit flag 
