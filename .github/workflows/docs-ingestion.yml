@@ -50,8 +50,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Run database migrations
-        run: pnpm db:push
-
-      - name: Ingest docs
-        run: pnpm tsx lib/ingest-docs.ts 
+      - name: Run docs ingestion
+        run: pnpm docs:ingest 
