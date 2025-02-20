@@ -45,7 +45,7 @@
     "langchain": "^0.3.19",
     "lucide-react": "^0.396.0",
     "nanoid": "^5.0.7",
-    "next": "14.2.4",
+    "next": "15.1.7",
     "next-themes": "^0.3.0",
     "pg": "^8.12.0",
     "postcss": "^8",
