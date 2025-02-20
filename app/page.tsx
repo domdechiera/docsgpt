@@ -12,9 +12,10 @@ import {
 import ReactMarkdown from 'react-markdown';
 import { useEffect, useRef, useState } from 'react';
 import { ModeToggle } from '@/components/mode-toggle';
+import VercelCaptcha from '@/components/VercelCaptcha';
 
 export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit } = useChat({
+  const { messages, input, handleInputChange, handleSubmit: originalHandleSubmit } = useChat({
     maxSteps: 3,
   });
   const [thinkingTime, setThinkingTime] = useState<Record<string, number>>({});
@@ -23,6 +24,10 @@ export default function Chat() {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [captchaError, setCaptchaError] = useState<string>('');
+  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [showCaptcha, setShowCaptcha] = useState(true);
 
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
@@ -82,6 +87,61 @@ export default function Chat() {
   useEffect(() => {
     handleScroll();
   }, [messages]);
+
+  const verifyCaptcha = async (token: string): Promise<boolean> => {
+    try {
+      const verifyResponse = await fetch('/api/verify-captcha', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      const verifyData = await verifyResponse.json();
+
+      if (verifyData.success) {
+        setCaptchaVerified(true);
+        setShowCaptcha(false);
+        return true;
+      } else {
+        setCaptchaError('CAPTCHA verification failed. Please try again.');
+        setCaptchaVerified(false);
+        setShowCaptcha(true);
+        return false;
+      }
+    } catch (error) {
+      setCaptchaError('Failed to verify CAPTCHA. Please try again.');
+      setCaptchaVerified(false);
+      setShowCaptcha(true);
+      return false;
+    }
+  };
+
+  const handleCaptchaVerify = async (token: string) => {
+    setCaptchaToken(token);
+    await verifyCaptcha(token);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // If CAPTCHA is not verified or token expired (showing CAPTCHA again)
+    if (showCaptcha) {
+      if (!captchaToken) {
+        setCaptchaError('Please complete the CAPTCHA before sending your message');
+        return;
+      }
+
+      const isValid = await verifyCaptcha(captchaToken);
+      if (!isValid) return;
+    }
+
+    // Clear any previous errors
+    setCaptchaError('');
+    // Proceed with the original submit
+    originalHandleSubmit(e);
+  };
 
   const renderMessage = (message: Message) => {
     if (message.content) {
@@ -158,7 +218,7 @@ export default function Chat() {
           <h1 className="text-3xl font-medium text-foreground">
             What can I help with?
           </h1>
-          <form onSubmit={handleSubmit} className="w-full max-w-3xl px-4">
+          <form onSubmit={handleSubmit} className="w-full max-w-3xl px-4 space-y-4">
             <div className="relative border border-input rounded-2xl bg-background dark:bg-[#303030]">
               <input
                 className="w-full h-full bg-transparent border-0 focus:outline-none text-foreground px-3 pt-3 pb-16 placeholder:text-muted-foreground rounded-2xl"
@@ -174,6 +234,15 @@ export default function Chat() {
                 <ArrowUp className="h-4 w-4" />
                 <span className="sr-only">Send message</span>
               </Button>
+            </div>
+            
+            <div className="flex flex-col items-center space-y-2">
+              {showCaptcha && (
+                <VercelCaptcha onVerify={handleCaptchaVerify} />
+              )}
+              {captchaError && (
+                <p className="text-red-500 text-sm">{captchaError}</p>
+              )}
             </div>
           </form>
           <div className="fixed bottom-4 left-0 right-0 text-center">
@@ -231,6 +300,14 @@ export default function Chat() {
                     <span className="sr-only">Send message</span>
                   </Button>
                 </div>
+                {showCaptcha && (
+                  <div className="flex flex-col items-center space-y-2 mt-4">
+                    <VercelCaptcha onVerify={handleCaptchaVerify} />
+                    {captchaError && (
+                      <p className="text-red-500 text-sm">{captchaError}</p>
+                    )}
+                  </div>
+                )}
               </form>
             </div>
             <div className="text-center pb-2">
