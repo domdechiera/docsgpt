@@ -9,4 +9,13 @@ updates:
       - "${{github.repository_owner}}"
     labels:
       - "dependencies"
-      - "dependabot" 
+      - "dependabot"
+    allow:
+      - dependency-type: "all"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    # Enable version updates for npm
+    versioning-strategy: auto
+    # Enable security updates
+    security-updates-only: false 
